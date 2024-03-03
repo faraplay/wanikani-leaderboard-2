@@ -460,8 +460,6 @@
                 if (xmlhttp.readyState==4 && xmlhttp.status==200)
                 {
                     //we get user information from the profile page e.g. wanikani.com/users/koichi
-                    let userSRSDistributionStart = xmlhttp.responseText.indexOf(",\"requested_information\":{\"");
-
                     const userNameMatch = xmlhttp.responseText.match(/<span class="username">([^<>]*)<\/span>/);
                     const userLevelMatch = xmlhttp.responseText.match(/<span class="level">([^<>]*)<\/span>/);
                     const userGravatarMatch = xmlhttp.responseText.match(/<div class="avatar user-avatar-default" .* style="background-image: url\(\/\/www\.gravatar\.com\/avatar\/(.*)\?.*\);"><\/div>/);
@@ -505,35 +503,20 @@
                     }
 
                     //get SRS scores
-                    let srsCounts = '';
-                    for(let i = 23; i < (599); i++){
-                        srsCounts+=xmlhttp.responseText[userSRSDistributionStart+i];
-                    }
 
-                    const filters = [
-                        ['apprentice', ''],['guru', ''],['master', ''],['enlighten', ''],['burned', ''],['radicals', ''],['kanji', ''],['vocabulary', ''],['total', ''],
-                        ['"', ''],['{', ''],['}', ''],[',', ''],[':::', ':'],['::', ':']];
-                    const srsDistributionNames = ['apprRad','apprKan','apprVoc','apprTotal','guruRad','guruKan','guruVoc','guruTotal','masterRad','masterKan','masterVoc','masterTotal',
-                                                    'enlightRad','enlightKan','enlightVoc','enlightTotal','burnRad','burnKan','burnVoc','burnTotal'];
-
-                    filters.forEach(function(element) {
-                        srsCounts = srsCounts.split(element[0]).join(element[1]);
-                    });
-                    srsCounts = srsCounts.substring(0, srsCounts.indexOf(';'));
-                    srsCounts = srsCounts.substring(1, srsCounts.length);
-                    srsCounts += ':';
+                    const regexTemplate = `title="<div class='srs-logo STAGE'></div>" data-content="&lt;ul&gt;&lt;li&gt;Radicals&lt;span&gt;([0-9]+)&lt;/span&gt;&lt;/li&gt;&lt;li&gt;Kanji&lt;span&gt;([0-9]+)&lt;/span&gt;&lt;/li&gt;&lt;li&gt;Vocabulary&lt;span&gt;([0-9]+)&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;"`;
+                    const stages = ["apprentice", "guru", "master", "enlightened", "burned"];
 
                     const obj = {};
-                    let tempNumber = '';
-                    let j = 0;
-                    for (let i = 0; i < srsCounts.length; i++){
-                        if (srsCounts[i] != ':') {
-                            tempNumber += srsCounts[i];
-                        } else {
-                            obj[srsDistributionNames[j]] = tempNumber;
-                            j++;tempNumber = '';
+                    for (const stage of stages) {
+                        const stageRegex = new RegExp(regexTemplate.replace("STAGE", stage));
+                        const stageMatch = xmlhttp.responseText.match(stageRegex);
+                        if (stageMatch) {
+                            obj[stage + "Radicals"] = Number(stageMatch[1]);
+                            obj[stage + "Kanji"] = Number(stageMatch[2]);
+                            obj[stage + "Vocabulary"] = Number(stageMatch[3]);
+                            obj[stage + "Total"] = Number(stageMatch[1]) + Number(stageMatch[2]) + Number(stageMatch[3]);
                         }
-
                     }
                     srsCountsLabeled.push(obj);
                 }
@@ -548,7 +531,7 @@
         item.srs_distribution = srsCountsLabeled;//assign SRS stats
         item.hasLeveledUp = hasUserLeveledUp;//whether or not user leveled up since last refresh
         item.wasUserFound = userFound;//whether the user name yielded result in the past (is used to detect name changes or deletion of account)
-        item.totalBurnPercentage = Math.round((srsCountsLabeled[0].burnTotal/totalNumberOfWKItems*100) * 100) / 100;
+        item.totalBurnPercentage = Math.round((srsCountsLabeled[0].burnedTotal/totalNumberOfWKItems*100) * 100) / 100;
     }
 
     function showLevelUps(){
@@ -1132,7 +1115,7 @@
                 let userErrorNotFoundMessage = usersInfoList[j].wasUserFound ? '' : accountNotFoundMessage;
 
                 //calculate burn percentage
-                let burnTotal = usersInfoList[j].level != 3 ? `Total Burned: ${usersInfoList[j].srs_distribution[0].burnTotal}, ${usersInfoList[j].totalBurnPercentage}%` : '&#9888; Users without subscription will show as level 3.';
+                let burnedTotal = usersInfoList[j].level != 3 ? `Total Burned: ${usersInfoList[j].srs_distribution[0].burnedTotal}, ${usersInfoList[j].totalBurnPercentage}%` : '&#9888; Users without subscription will show as level 3.';
 
                 //for user achievements
                 let userCelebrationIcon = '';
@@ -1151,7 +1134,7 @@
                                         <td style="text-align:center;" tooltip="${wkRealmNames[usersInfoList[j].realm_number]}">
                                             <span>${wkRealms[usersInfoList[j].realm_number]}</span>
                                         </td>
-                                        <td tooltip="${burnTotal}">
+                                        <td tooltip="${burnedTotal}">
                                             <a href="users/${usersInfoList[j].name}" class="${adminClass}">
                                                 <span>${usersInfoList[j].name + userErrorNotFoundMessage}</span>
                                                 <span class="${usersInfoList[j].level} floatRight">${usersInfoList[j].level}</span>
