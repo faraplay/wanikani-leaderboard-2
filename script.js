@@ -1,13 +1,14 @@
 // ==UserScript==
-// @name         Wanikani Leaderboard
+// @name         Wanikani Leaderboard 2
 // @namespace    http://tampermonkey.net/
-// @version      1.11
+// @version      2.0.0
 // @description  Get levels from usernames and order them in a competitive list
-// @author       Dani2
-// @include      https://www.wanikani.com/dashboard
-// @include      https://www.wanikani.com/
+// @author       faraplay, Dani2
+// @match        https://www.wanikani.com/dashboard
+// @match        https://www.wanikani.com/
 // @require      https://unpkg.com/sweetalert/dist/sweetalert.min.js
 // @grant        none
+// @license      MIT
 // ==/UserScript==
 
 (function() {
@@ -459,20 +460,17 @@
                 if (xmlhttp.readyState==4 && xmlhttp.status==200)
                 {
                     //we get user information from the profile page e.g. wanikani.com/users/koichi
-                    let userNameStart = xmlhttp.responseText.indexOf("<title>WaniKani / Profile / ");
-                    let userLevelStart = xmlhttp.responseText.indexOf(",\"level\":");
-                    let userGravatarStart = xmlhttp.responseText.indexOf("\",\"gravatar\":\"");
                     let userSRSDistributionStart = xmlhttp.responseText.indexOf(",\"requested_information\":{\"");
 
-                    //get username
-                    for(let i = 28; i < (28+item.name.length); i++){
-                        userName+=xmlhttp.responseText[userNameStart+i];
-                    }
+                    const userNameMatch = xmlhttp.responseText.match(/<span class="username">([^<>]*)<\/span>/);
+                    const userLevelMatch = xmlhttp.responseText.match(/<span class="level">([^<>]*)<\/span>/);
+                    const userGravatarMatch = xmlhttp.responseText.match(/<div class="avatar user-avatar-default" .* style="background-image: url\(\/\/www\.gravatar\.com\/avatar\/(.*)\?.*\);"><\/div>/);
 
-                    //check to see if user given name and web retrieved user name are equal
-                    if(userName.toLowerCase() === item.name.toLowerCase()){
-                        userLevel = xmlhttp.responseText[userLevelStart+9]+xmlhttp.responseText[userLevelStart+10];
-                        if (userLevel[1] == ','){ userLevel = userLevel[0];}//remove comma from single digit levels.
+                    if (userNameMatch && userLevelMatch && userGravatarMatch &&
+                        //check to see if user given name and web retrieved user name are equal
+                        userNameMatch[1].toLowerCase() === item.name.toLowerCase()){
+                        userName = userNameMatch[1];
+                        userLevel = userLevelMatch[1];
 
                         //check to see if user is already on the leaderboards
                         let found = usersInfoList.find(function(element) {
@@ -487,9 +485,7 @@
                         }
 
                         //get gravatar link
-                        for(let i = 14; i < 46; i++){
-                            userGravatarLink+=xmlhttp.responseText[userGravatarStart+i];
-                        }
+                        userGravatarLink = userGravatarMatch[1];
 
                         userFound = true;
                     } else { //a wanikani profile page didn't exist for this username and we got redirected to dashboard
