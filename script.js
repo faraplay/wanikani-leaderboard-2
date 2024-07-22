@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wanikani Leaderboard 2
 // @namespace    http://tampermonkey.net/
-// @version      2.0.1
+// @version      2.0.2
 // @description  Get levels from usernames and order them in a competitive list
 // @author       faraplay, Dani2
 // @match        https://www.wanikani.com/dashboard
@@ -587,6 +587,10 @@
         getTimeSinceLastRefreshFromCache().then(function(result) {
             timeSinceLastRefresh = result;
             updateTimeSinceRefreshText();
+            if (Date.now() > timeSinceLastRefresh + (1000 * 60 * 60 * 24)){
+                console.log("It's been over a day, refresh!");
+                delay().then(refreshDashboard);
+            }
         });
 
         //get cache
