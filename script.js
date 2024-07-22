@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wanikani Leaderboard 2
 // @namespace    http://tampermonkey.net/
-// @version      2.0.0
+// @version      2.0.1
 // @description  Get levels from usernames and order them in a competitive list
 // @author       faraplay, Dani2
 // @match        https://www.wanikani.com/dashboard
@@ -9,6 +9,8 @@
 // @require      https://unpkg.com/sweetalert/dist/sweetalert.min.js
 // @grant        none
 // @license      MIT
+// @downloadURL https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.user.js
+// @updateURL https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.meta.js
 // ==/UserScript==
 
 (function() {
@@ -460,9 +462,9 @@
                 if (xmlhttp.readyState==4 && xmlhttp.status==200)
                 {
                     //we get user information from the profile page e.g. wanikani.com/users/koichi
-                    const userNameMatch = xmlhttp.responseText.match(/<span class="username">([^<>]*)<\/span>/);
-                    const userLevelMatch = xmlhttp.responseText.match(/<span class="level">([^<>]*)<\/span>/);
-                    const userGravatarMatch = xmlhttp.responseText.match(/<div class="avatar user-avatar-default" .* style="background-image: url\(\/\/www\.gravatar\.com\/avatar\/(.*)\?.*\);"><\/div>/);
+                    const userNameMatch = xmlhttp.responseText.match(/<div class="public-profile__username">([^<>]*)<\/div>/);
+                    const userLevelMatch = xmlhttp.responseText.match(/<div class="public-profile__level-info-level">Level ([^<>]*)<\/div>/);
+                    const userGravatarMatch = xmlhttp.responseText.match(/<div class="public-profile__avatar" .* style="background-image: url\(https:\/\/www\.gravatar\.com\/avatar\/(.*)\?.*\);"><\/div>/);
 
                     if (userNameMatch && userLevelMatch && userGravatarMatch &&
                         //check to see if user given name and web retrieved user name are equal
