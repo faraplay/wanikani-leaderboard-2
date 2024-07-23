@@ -7,6 +7,7 @@
 // @match        https://www.wanikani.com/dashboard
 // @match        https://www.wanikani.com/
 // @require      https://unpkg.com/sweetalert/dist/sweetalert.min.js
+// @require https://code.jquery.com/jquery-3.6.0.min.js
 // @grant        none
 // @license      MIT
 // @downloadURL https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.user.js
@@ -158,49 +159,39 @@
         });
     }
 
-    function getUserListFromCache(){
-        let deferred = $.Deferred();
-        wkof.file_cache.load('leaderboard_userList')
-            .then(function(settings) {
-            deferred.resolve(settings);
-        }).catch(e => {
+    async function getUserListFromCache(){
+        try {
+            return await wkof.file_cache.load('leaderboard_userList');
+        } catch (e) {
             console.log('Leaderboard - No cache found');
-            deferred.resolve();
-        });
-        return deferred.promise();
+            return;
+        }
     }
 
     //not called anywhere is for debugging purposes
-    function deleteLeaderboardRelatedCache(cacheName = null){
-        let deferred = $.Deferred();
+    async function deleteLeaderboardRelatedCache(cacheName = null){
         if(cacheName){
             console.log('deleting: ' + cacheName);
-            wkof.file_cache.delete(cacheName).then(function() {//delete specific cached file
-                deferred.resolve();
-            });
+            await wkof.file_cache.delete(cacheName) //delete specific cached file
         } else {
             console.log('deleting leaderboard related caches');
-            wkof.file_cache.delete(/^leaderboard_/).then(function() {//delete all leaderboard related caching
-                deferred.resolve();
-            });
+            await wkof.file_cache.delete(/^leaderboard_/) //delete all leaderboard related caching
         }
-        return deferred.promise();
     }
 
     //refresh time
-    function getTimeSinceLastRefreshFromCache(){
-        let deferred = $.Deferred();
-        wkof.file_cache.load('leaderboard_timeSinceLastRefresh').then(function(settings) {
-            deferred.resolve(settings);
-        }).catch(e => {
-            wkof.file_cache.save('leaderboard_timeSinceLastRefresh', Date.now()).then(function(){
-            }).catch(e => {
+    async function getTimeSinceLastRefreshFromCache(){
+        try {
+            return await wkof.file_cache.load('leaderboard_timeSinceLastRefresh')
+        } catch {
+            try {
+                await wkof.file_cache.save('leaderboard_timeSinceLastRefresh', Date.now())
+            } catch (e) {
                 console.log(e);
-            });
+            }
             timeSinceLastRefreshText = '0 days 0 hours 0 minutes';
-            deferred.resolve(Date.now());
-        });
-        return deferred.promise();
+            return Date.now();
+        }
     }
 
     function refreshDashboard(){
@@ -219,15 +210,12 @@
         });
     }
 
-    function getUserSortingMethodFromCache(){
-        let deferred = $.Deferred();
-        wkof.file_cache.load('leaderboard_sortingMethod').then(function(settings) {
-            deferred.resolve(settings);
-        }).catch(e => {
-            userSortingMethod = 'key1';
-            deferred.resolve();
-        });
-        return deferred.promise();
+    async function getUserSortingMethodFromCache(){
+        try {
+            return await wkof.file_cache.load('leaderboard_sortingMethod')
+        } catch {
+            return 'key1';
+        }
     }
 
     function saveNumberOfLeaderboardTables(){
@@ -236,15 +224,12 @@
         });
     }
 
-    function getNumberOfLeaderboardTablesFromCache(){
-        let deferred = $.Deferred();
-        wkof.file_cache.load('leaderboard_numberOfTables').then(function(settings) {
-            deferred.resolve(settings);
-        }).catch(e => {
-            numberOfLeaderboardTables = '1';
-            deferred.resolve();
-        });
-        return deferred.promise();
+    async function getNumberOfLeaderboardTablesFromCache(){
+        try {
+            return await wkof.file_cache.load('leaderboard_numberOfTables')
+        } catch {
+            return '1';
+        }
     }
 
     //------------------------------
@@ -579,6 +564,7 @@
     }*/
 
     function startup() {
+        console.log("Wanikani Leaderboard starting up!");
         //for testing purposes
         //deleteLeaderboardRelatedCache();
         //testData();
@@ -1072,12 +1058,12 @@
 
             sectionContents += `
                 <div class="leaderboardSpan span4">
-                    <section class="kotoba-table-list dashboard-sub-section" style="position: relative;">
+                    <section class="kotoba-table-list dashboard-sub-section wk-panel" style="position: relative;">
                         <h3 class="small-caps">Leaderboard</h3>
-                        <i class="leaderboard-settings icon-plus" title="Add user" style="position:absolute; top:7.5px; right:5px;"></i>
-                        <i class="leaderboard-refresh icon-refresh" title="Refresh leaderboard" style="position:absolute; top:7.5px; right:25px;"></i>
-                        <i class="leaderboard-resize icon-resize-horizontal" title="Widen screen" style="position:absolute; top:7.5px; right:45px;"></i>
-                        <i class="leaderboard-export icon-circle-arrow-down" title="Download leaderboard" style="position:absolute; top:7.5px; left:5px;"></i>
+                        <i class="leaderboard-settings icon-plus" title="Add user" style="position:absolute; top:7.5px; right:5px;">Add user</i>
+                        <i class="leaderboard-refresh icon-refresh" title="Refresh leaderboard" style="position:absolute; top:7.5px; right:25px;">Refresh</i>
+                        <i class="leaderboard-resize icon-resize-horizontal" title="Widen screen" style="position:absolute; top:7.5px; right:45px;">Widen</i>
+                        <i class="leaderboard-export icon-circle-arrow-down" title="Download leaderboard" style="position:absolute; top:7.5px; left:5px;">Download</i>
                         <input type="file" id="leaderboard-files-import" name="files[]" accept=".csv" multiple /><label class="icon-circle-arrow-up" for="leaderboard-files-import" title="Upload leaderboard" style="position:absolute; top:7.5px; left:25px;"></label>
                         <div id="leaderboard_loader" class="leaderboard_loader"></div>
                         <table>
@@ -1170,7 +1156,7 @@
                 $('section.progression').after(leaderboardTableStyle);
             }
             else {
-                $('section.srs-progress').after(leaderboardTableStyle);
+                $('div.wk-panel--review-forecast').before(leaderboardTableStyle);
             }
             $('#leaderboard').append(sectionContents);
         }
