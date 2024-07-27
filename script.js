@@ -4,8 +4,7 @@
 // @version      2.0.2
 // @description  Get levels from usernames and order them in a competitive list
 // @author       faraplay, Dani2
-// @match        https://www.wanikani.com/dashboard
-// @match        https://www.wanikani.com/
+// @match        https://www.wanikani.com/*
 // @require      https://unpkg.com/sweetalert/dist/sweetalert.min.js
 // @require https://code.jquery.com/jquery-3.6.0.min.js
 // @grant        none
@@ -564,6 +563,7 @@
     }*/
 
     function startup() {
+        if (!(document.URL.endsWith("wanikani.com/") || document.URL.endsWith("/dashboard"))) return;
         console.log("Wanikani Leaderboard starting up!");
         //for testing purposes
         //deleteLeaderboardRelatedCache();
@@ -1186,5 +1186,12 @@
         adminHovering();
     }
 
+    // rerun startup on turbo page change
+    window.addEventListener("turbo:before-render", async (e) => {
+        let observer = new MutationObserver(m => {
+			startup();
+		});
+		observer.observe(e.detail.newBody, {childList: true});
+    });
     startup();
 })();
