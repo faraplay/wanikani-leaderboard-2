@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wanikani Leaderboard 2
 // @namespace    http://tampermonkey.net/
-// @version      2.0.2
+// @version      2.0.3
 // @description  Get levels from usernames and order them in a competitive list
 // @author       faraplay, Dani2
 // @match        https://www.wanikani.com/*
@@ -432,7 +432,7 @@
         let xmlhttp;
         let userName = '';
         let userLevel = 0;
-        let userGravatarLink = '';
+        let userAvatarLink = '';
         let srsCountsLabeled = [];
         let hasUserLeveledUp = false;
         let userFound = false;
@@ -448,9 +448,15 @@
                     //we get user information from the profile page e.g. wanikani.com/users/koichi
                     const userNameMatch = xmlhttp.responseText.match(/<div class="public-profile__username">([^<>]*)<\/div>/);
                     const userLevelMatch = xmlhttp.responseText.match(/<div class="public-profile__level-info-level">Level ([^<>]*)<\/div>/);
-                    const userGravatarMatch = xmlhttp.responseText.match(/<div class="public-profile__avatar" .* style="background-image: url\(https:\/\/www\.gravatar\.com\/avatar\/(.*)\?.*\);"><\/div>/);
+                    const userGravatarMatch = xmlhttp.responseText.match(/<div class="public-profile__avatar">[\n\s]*<img class="user-avatar(?: [^"]*)?" .* data-load-gravatar-url-value="https:\/\/gravatar\.com\/avatar\/(.*)\?/);
+                    const userDefaultAvatarMatch = xmlhttp.responseText.match(/<div class="public-profile__avatar">[\n\s]*<img class="user-avatar(?: [^"]*)?" .* src="([^"]*)"/);
+                    userAvatarLink = userGravatarMatch ? `https://www.gravatar.com/avatar/${userGravatarMatch[1]}?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png` :
+                                            userDefaultAvatarMatch ? userDefaultAvatarMatch[1] : "";
 
-                    if (userNameMatch && userLevelMatch && userGravatarMatch &&
+                    console.log(xmlhttp.responseText);
+                    console.log(userNameMatch, userLevelMatch, userGravatarMatch);
+
+                    if (userNameMatch && userLevelMatch && userAvatarLink &&
                         //check to see if user given name and web retrieved user name are equal
                         userNameMatch[1].toLowerCase() === item.name.toLowerCase()){
                         userName = userNameMatch[1];
@@ -468,9 +474,6 @@
                             }
                         }
 
-                        //get gravatar link
-                        userGravatarLink = userGravatarMatch[1];
-
                         userFound = true;
                     } else { //a wanikani profile page didn't exist for this username and we got redirected to dashboard
 
@@ -484,7 +487,7 @@
                         }*/
 
                         userLevel = -1;
-                        userGravatarLink = 'https://www.gravatar.com/avatar/65977e18f599e0319495b468c92b5179?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png';//default avatar
+                        userAvatarLink = 'https://www.gravatar.com/avatar/65977e18f599e0319495b468c92b5179?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png';//default avatar
                         userFound = false;
                     }
 
@@ -512,7 +515,7 @@
         }
 
         item.level = userLevel;//assign level
-        item.avatar_link = userGravatarLink;//assign gravatarlink
+        item.avatar_link = userAvatarLink;//assign gravatarlink
         item.realm_number = setRealm(item.level);//assign realm
         item.srs_distribution = srsCountsLabeled;//assign SRS stats
         item.hasLeveledUp = hasUserLeveledUp;//whether or not user leveled up since last refresh
@@ -1134,7 +1137,7 @@
                                             </a>
                                         </td>
                                         <td class="${usersInfoList[j].name} leaderboard-userImg" tooltip="Remove user?">
-                                            <img class="leaderboard-img-center" src="https://www.gravatar.com/avatar/${usersInfoList[j].avatar_link}?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png"/>
+                                            <img class="leaderboard-img-center" src="${usersInfoList[j].avatar_link}"/>
                                         </td>
                                     </tr>`;
             }
