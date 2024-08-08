@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wanikani Leaderboard 2
 // @namespace    http://tampermonkey.net/
-// @version      2.0.3
+// @version      2.0.4
 // @description  Get levels from usernames and order them in a competitive list
 // @author       faraplay, Dani2
 // @match        https://www.wanikani.com/*
@@ -452,9 +452,6 @@
                     const userDefaultAvatarMatch = xmlhttp.responseText.match(/<div class="public-profile__avatar">[\n\s]*<img class="user-avatar(?: [^"]*)?" .* src="([^"]*)"/);
                     userAvatarLink = userGravatarMatch ? `https://www.gravatar.com/avatar/${userGravatarMatch[1]}?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png` :
                                             userDefaultAvatarMatch ? userDefaultAvatarMatch[1] : "";
-
-                    console.log(xmlhttp.responseText);
-                    console.log(userNameMatch, userLevelMatch, userGravatarMatch);
 
                     if (userNameMatch && userLevelMatch && userAvatarLink &&
                         //check to see if user given name and web retrieved user name are equal
