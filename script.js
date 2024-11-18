@@ -1,16 +1,16 @@
 // ==UserScript==
 // @name         Wanikani Leaderboard 2
 // @namespace    http://tampermonkey.net/
-// @version      2.0.4
+// @version      2.0.5
 // @description  Get levels from usernames and order them in a competitive list
 // @author       faraplay, Dani2
 // @match        https://www.wanikani.com/*
 // @require      https://unpkg.com/sweetalert/dist/sweetalert.min.js
-// @require https://code.jquery.com/jquery-3.6.0.min.js
+// @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @grant        none
 // @license      MIT
-// @downloadURL https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.user.js
-// @updateURL https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.user.js
+// @updateURL    https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.meta.js
 // ==/UserScript==
 
 (function() {
@@ -33,6 +33,7 @@
 
     };
 
+    wkof.on_pageload(['/', '/dashboard'], startup);
     wkof.include('Menu, Settings');
     wkof.ready('Menu, Settings').then(install_menu).then(install_settings);
 
@@ -563,11 +564,13 @@
     }*/
 
     function startup() {
-        if (!(document.URL.endsWith("wanikani.com/") || document.URL.endsWith("/dashboard"))) return;
         console.log("Wanikani Leaderboard starting up!");
         //for testing purposes
         //deleteLeaderboardRelatedCache();
         //testData();
+
+        // link the icons font
+        linkFontAwesome();
 
         //get cache
         getTimeSinceLastRefreshFromCache().then(function(result) {
@@ -611,6 +614,13 @@
     // Styling
     //------------------------------
 
+    function linkFontAwesome() {
+        const fontawesome_link = document.createElement('link');
+        fontawesome_link.setAttribute('href', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.2.1/css/font-awesome.css');
+        fontawesome_link.setAttribute('rel', 'stylesheet');
+        document.head.appendChild(fontawesome_link);
+    }
+
     const leaderboardTableCss = `
         /*.none*/
 
@@ -623,7 +633,7 @@
 
         /*COLORS*/
 
-        .apprColor {
+        tr.apprColor {
             background-color: #f100a1;
             background-image: -moz-linear-gradient(top, #f0a, #dd0093);
             background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#f0a), to(#dd0093));
@@ -632,7 +642,10 @@
             background-image: linear-gradient(to bottom, #f0a, #dd0093);
             background-repeat: repeat-x;
         }
-        .guruColor {
+        tr.apprColor span, tr.apprColor i {
+            color: #ffffff;
+        }
+        tr.guruColor {
             background-color: #a100f1;
             background-image: -moz-linear-gradient(top, #a0f, #9300dd);
             background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#a0f), to(#9300dd));
@@ -641,7 +654,10 @@
             background-image: linear-gradient(to bottom, #a0f, #9300dd);
             background-repeat: repeat-x;
         }
-        .masterColor {
+        tr.guruColor span, tr.guruColor i {
+            color: #ffffff;
+        }
+        tr.masterColor {
             background-color: #294ddb;/*183FD8*/
             background-image: -moz-linear-gradient(top, #5571e2, #2545C3);
             background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#5571e2), to(#2545C3));
@@ -650,7 +666,10 @@
             background-image: linear-gradient(to bottom, #5571e2, #2545C3);
             background-repeat: repeat-x;
         }
-        .enlightenedColor {
+        tr.masterColor span, tr.masterColor i {
+            color: #ffffff;
+        }
+        tr.enlightenedColor {
             background-color: #00a1f1;
             background-image: -moz-linear-gradient(top, #0af, #0093dd);
             background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0af), to(#0093dd));
@@ -659,7 +678,10 @@
             background-image: linear-gradient(to bottom, #0af, #0093dd);
             background-repeat: repeat-x;
         }
-        .burnedColor {
+        tr.enlightenedColor span, tr.enlightenedColor i {
+            color: #ffffff;
+        }
+        tr.burnedColor {
             background-color: #faac05;
             background-image: -moz-linear-gradient(top, #fbc550, #faac05);
             background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#fbc550), to(#faac05));
@@ -667,6 +689,9 @@
             background-image: -o-linear-gradient(top, #fbc550, #faac05);
             background-image: linear-gradient(to bottom, #fbc550, #faac05);
             background-repeat: repeat-x;
+        }
+        tr.burnedColor span, tr.burnedColor i {
+            color: #ffffff;
         }
         .customColor1 {
             background-color: #dd0093;
@@ -708,6 +733,7 @@
             background: yellow;
             margin-top: -50px;
             margin-left: 20px;
+            line-height: 20px;
         }
 
         [tooltip]:not([tooltip-persistent]):before {
@@ -790,6 +816,28 @@
             display: block;
             margin-left: auto;
             margin-right: auto;
+            margin-top: 5px;
+            margin-bottom: -5px;
+        }
+        /*CUSTOM SETTINGS*/
+        .see-more {
+            text-align: center;
+        }
+        .small-caps {
+            font-variant: all-small-caps;
+            text-align: center;
+        }
+        .kotoba-table-list a {
+            text-decoration: none;
+        }
+        .kotoba-table-list table {
+            margin: 15px 0 10px 0;
+        }
+        .kotoba-table-list tr {
+            line-height: 35px;
+        }
+        .kotoba-table-list .icon-level-up {
+            margin-top: 9px;
         }
         /*END LEADERBOARD*/
         `;
@@ -1060,11 +1108,11 @@
                 <div class="leaderboardSpan span4">
                     <section class="kotoba-table-list dashboard-sub-section wk-panel" style="position: relative;">
                         <h3 class="small-caps">Leaderboard</h3>
-                        <i class="leaderboard-settings icon-plus" title="Add user" style="position:absolute; top:7.5px; right:5px;">Add user</i>
-                        <i class="leaderboard-refresh icon-refresh" title="Refresh leaderboard" style="position:absolute; top:7.5px; right:25px;">Refresh</i>
-                        <i class="leaderboard-resize icon-resize-horizontal" title="Widen screen" style="position:absolute; top:7.5px; right:45px;">Widen</i>
-                        <i class="leaderboard-export icon-circle-arrow-down" title="Download leaderboard" style="position:absolute; top:7.5px; left:5px;">Download</i>
-                        <input type="file" id="leaderboard-files-import" name="files[]" accept=".csv" multiple /><label class="icon-circle-arrow-up" for="leaderboard-files-import" title="Upload leaderboard" style="position:absolute; top:7.5px; left:25px;"></label>
+                        <i class="leaderboard-settings icon-plus" title="Add user" style="position:absolute; top:15px; right:15px;"></i>
+                        <i class="leaderboard-refresh icon-refresh" title="Refresh leaderboard" style="position:absolute; top:15px; right:35px;"></i>
+                        <i class="leaderboard-resize icon-resize-horizontal" title="Widen screen" style="position:absolute; top:15px; right:55px;"></i>
+                        <i class="leaderboard-export icon-circle-arrow-down" title="Download leaderboard" style="position:absolute; top:15px; left:15px;"></i>
+                        <input type="file" id="leaderboard-files-import" name="files[]" accept=".csv" multiple /><label class="icon-circle-arrow-up" for="leaderboard-files-import" title="Upload leaderboard" style="position:absolute; top:15px; left:35px;"></label>
                         <div id="leaderboard_loader" class="leaderboard_loader"></div>
                         <table>
                             <tbody>`;
@@ -1088,6 +1136,8 @@
             } else {
                 timeSinceLastRefreshHtml = `<div class="see-more">
                                                 <a class="small-caps" style="padding: 3.5px 15px 0px 15px;">Time since last refresh...</a>
+                                                <br/>
+                                                <span style="font-size: 15px; line-height: 24px">
                                                 ${timeSinceLastRefreshText}
                                                 (
                                                 <a class="tooltipImg icon-question">
@@ -1097,6 +1147,7 @@
                                                     </span>
                                                 </a>
                                                 )
+                                                </span>
                                             </div>`;
             }
             for (var j = startNumberTable; j < endNumberTable; j++){
@@ -1185,13 +1236,4 @@
 
         adminHovering();
     }
-
-    // rerun startup on turbo page change
-    window.addEventListener("turbo:before-render", async (e) => {
-        let observer = new MutationObserver(m => {
-			startup();
-		});
-		observer.observe(e.detail.newBody, {childList: true});
-    });
-    startup();
 })();
