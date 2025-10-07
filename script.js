@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Wanikani Leaderboard 2
 // @namespace    http://tampermonkey.net/
-// @version      2.0.5
+// @version      2.0.6
 // @description  Get levels from usernames and order them in a competitive list
-// @author       faraplay, Dani2
-// @match        https://www.wanikani.com/*
+// @author       crazyfluff, faraplay, Dani2
+// @include      https://www.wanikani.com/dashboard
+// @include      https://www.wanikani.com/
 // @require      https://unpkg.com/sweetalert/dist/sweetalert.min.js
-// @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @grant        none
 // @license      MIT
 // @downloadURL  https://update.greasyfork.org/scripts/488876/Wanikani%20Leaderboard%202.user.js
@@ -33,7 +33,6 @@
 
     };
 
-    wkof.on_pageload(['/', '/dashboard'], startup);
     wkof.include('Menu, Settings');
     wkof.ready('Menu, Settings').then(install_menu).then(install_settings);
 
@@ -74,21 +73,21 @@
                         }},
                         page_id2: {type: 'page', label:  'Sort Order', hover_tip:'', content: {
                             'userOrderOption': {type: 'dropdown', label: 'Sorting order', hover_tip: 'Select how you want users to be ordered.', default:'keyDefault', full_width: true, on_change: changeSortOrder,
-                                            content: {
-                                                keyDefault: '--Sort Order--',
-                                                key1: 'Level -> Burn% -> Name',
-                                                key2: 'Level -> Name',
-                                                key3: 'Burn% -> Level -> Name',
-                                                key4: 'Burn% -> Name',
-                                                key5: 'Name Ascending',
-                                                key6: 'Name Descending',
-                                            }
-                                            }
+                                                content: {
+                                                    keyDefault: '--Sort Order--',
+                                                    key1: 'Level -> Burn% -> Name',
+                                                    key2: 'Level -> Name',
+                                                    key3: 'Burn% -> Level -> Name',
+                                                    key4: 'Burn% -> Name',
+                                                    key5: 'Name Ascending',
+                                                    key6: 'Name Descending',
+                                                }
+                                               }
                         }},
                         page_id3: {type: 'page', label:  'Number of tables', hover_tip:'', content: {
                             'numberOfLeaderboardTabless': {type:'dropdown', label:'Number of leaderboard tables', hover_tip: 'The amount of tables the added users will be split between', default:'0', full_width: true,
-                                            on_change: changeNumberofTables,
-                                            content:{0:'--table nr.--', 1:'1 (Min)', 2:'2',3:'3'}},
+                                                           on_change: changeNumberofTables,
+                                                           content:{0:'--table nr.--', 1:'1 (Min)', 2:'2',3:'3'}},
                         }}
                     }
                 }
@@ -159,39 +158,49 @@
         });
     }
 
-    async function getUserListFromCache(){
-        try {
-            return await wkof.file_cache.load('leaderboard_userList');
-        } catch (e) {
-            console.log('Leaderboard - No cache found');
-            return;
-        }
+    function getUserListFromCache(){
+        return new Promise((resolve) => {
+            wkof.file_cache.load('leaderboard_userList')
+                .then(function(settings) {
+                resolve(settings);
+            }).catch(e => {
+                console.log('Leaderboard - No cache found');
+                resolve();
+            });
+        });
     }
 
     //not called anywhere is for debugging purposes
-    async function deleteLeaderboardRelatedCache(cacheName = null){
-        if(cacheName){
-            console.log('deleting: ' + cacheName);
-            await wkof.file_cache.delete(cacheName) //delete specific cached file
-        } else {
-            console.log('deleting leaderboard related caches');
-            await wkof.file_cache.delete(/^leaderboard_/) //delete all leaderboard related caching
-        }
+    function deleteLeaderboardRelatedCache(cacheName = null){
+        return new Promise((resolve) => {
+            if(cacheName){
+                console.log('deleting: ' + cacheName);
+                wkof.file_cache.delete(cacheName).then(function() {//delete specific cached file
+                    resolve();
+                });
+            } else {
+                console.log('deleting leaderboard related caches');
+                wkof.file_cache.delete(/^leaderboard_/).then(function() {//delete all leaderboard related caching
+                    resolve();
+                });
+            }
+        });
     }
 
     //refresh time
-    async function getTimeSinceLastRefreshFromCache(){
-        try {
-            return await wkof.file_cache.load('leaderboard_timeSinceLastRefresh')
-        } catch {
-            try {
-                await wkof.file_cache.save('leaderboard_timeSinceLastRefresh', Date.now())
-            } catch (e) {
-                console.log(e);
-            }
-            timeSinceLastRefreshText = '0 days 0 hours 0 minutes';
-            return Date.now();
-        }
+    function getTimeSinceLastRefreshFromCache(){
+        return new Promise((resolve) => {
+            wkof.file_cache.load('leaderboard_timeSinceLastRefresh').then(function(settings) {
+                resolve(settings);
+            }).catch(e => {
+                wkof.file_cache.save('leaderboard_timeSinceLastRefresh', Date.now()).then(function(){
+                }).catch(e => {
+                    console.log(e);
+                });
+                timeSinceLastRefreshText = '0 days 0 hours 0 minutes';
+                resolve(Date.now());
+            });
+        });
     }
 
     function refreshDashboard(){
@@ -210,12 +219,15 @@
         });
     }
 
-    async function getUserSortingMethodFromCache(){
-        try {
-            return await wkof.file_cache.load('leaderboard_sortingMethod')
-        } catch {
-            return 'key1';
-        }
+    function getUserSortingMethodFromCache(){
+        return new Promise((resolve) => {
+            wkof.file_cache.load('leaderboard_sortingMethod').then(function(settings) {
+                resolve(settings);
+            }).catch(e => {
+                userSortingMethod = 'key1';
+                resolve();
+            });
+        });
     }
 
     function saveNumberOfLeaderboardTables(){
@@ -224,12 +236,15 @@
         });
     }
 
-    async function getNumberOfLeaderboardTablesFromCache(){
-        try {
-            return await wkof.file_cache.load('leaderboard_numberOfTables')
-        } catch {
-            return '1';
-        }
+    function getNumberOfLeaderboardTablesFromCache(){
+        return new Promise((resolve) => {
+            wkof.file_cache.load('leaderboard_numberOfTables').then(function(settings) {
+                resolve(settings);
+            }).catch(e => {
+                numberOfLeaderboardTables = '1';
+                resolve();
+            });
+        });
     }
 
     //------------------------------
@@ -323,7 +338,7 @@
                         alert('A user with that name already exists in the list.');
                     }
                 }
-        });
+            });
     }
 
     //delete a single user
@@ -433,7 +448,7 @@
         let xmlhttp;
         let userName = '';
         let userLevel = 0;
-        let userAvatarLink = '';
+        let userGravatarLink = '';
         let srsCountsLabeled = [];
         let hasUserLeveledUp = false;
         let userFound = false;
@@ -447,18 +462,35 @@
                 if (xmlhttp.readyState==4 && xmlhttp.status==200)
                 {
                     //we get user information from the profile page e.g. wanikani.com/users/koichi
-                    const userNameMatch = xmlhttp.responseText.match(/<div class="public-profile__username">([^<>]*)<\/div>/);
-                    const userLevelMatch = xmlhttp.responseText.match(/<div class="public-profile__level-info-level">Level ([^<>]*)<\/div>/);
-                    const userGravatarMatch = xmlhttp.responseText.match(/<div class="public-profile__avatar">[\n\s]*<img class="user-avatar(?: [^"]*)?" .* data-load-gravatar-url-value="https:\/\/gravatar\.com\/avatar\/(.*)\?/);
-                    const userDefaultAvatarMatch = xmlhttp.responseText.match(/<div class="public-profile__avatar">[\n\s]*<img class="user-avatar(?: [^"]*)?" .* src="([^"]*)"/);
-                    userAvatarLink = userGravatarMatch ? `https://www.gravatar.com/avatar/${userGravatarMatch[1]}?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png` :
-                                            userDefaultAvatarMatch ? userDefaultAvatarMatch[1] : "";
+                    let userNameStart = xmlhttp.responseText.indexOf("<title>WaniKani / Profile / ");
+                    let userLevelStart = xmlhttp.responseText.indexOf("info-level\">Level");
+                    if (userLevelStart == -1){
+                        console.error('Could not find level for user ' + item.name);
+                    }
+                    let userGravatarStart = xmlhttp.responseText.indexOf("alt=\"Your avatar\" src=\"");
+                    if (userGravatarStart == -1){
+                        console.error('Could not find gravatar link for user ' + item.name);
+                    }
 
-                    if (userNameMatch && userLevelMatch && userAvatarLink &&
-                        //check to see if user given name and web retrieved user name are equal
-                        userNameMatch[1].toLowerCase() === item.name.toLowerCase()){
-                        userName = userNameMatch[1];
-                        userLevel = userLevelMatch[1];
+                    //get username
+                    for(let i = 28; i < (28+item.name.length); i++){
+                        userName+=xmlhttp.responseText[userNameStart+i];
+                    }
+
+                    //check to see if user given name and web retrieved user name are equal
+                    if(userName.toLowerCase() === item.name.toLowerCase()){
+                        let firstChar = xmlhttp.responseText[userLevelStart+18];
+                        let secondChar = xmlhttp.responseText[userLevelStart+19];
+
+                        if (/\d/.test(firstChar) && /\d/.test(secondChar)) {
+                            userLevel = firstChar + secondChar;
+                        } else if (/\d/.test(firstChar)) {
+                            userLevel = firstChar;
+                        } else {
+                            userLevel = 0;
+                        }
+
+                        if (userLevel[1] == ','){ userLevel = userLevel[0];}//remove comma from single digit levels.
 
                         //check to see if user is already on the leaderboards
                         let found = usersInfoList.find(function(element) {
@@ -470,6 +502,13 @@
                                 usersThatLeveledUp += found.name + ' ' + found.level + ' -> ' + userLevel + ', \n';
                                 hasUserLeveledUp = true;
                             }
+                        }
+
+                        //get gravatar link
+                        for(let i = 23; i < 100; i++){
+                            if (xmlhttp.responseText[userGravatarStart+i] == '"'){ break; }
+                            userGravatarLink+=xmlhttp.responseText[userGravatarStart+i];
+
                         }
 
                         userFound = true;
@@ -485,26 +524,45 @@
                         }*/
 
                         userLevel = -1;
-                        userAvatarLink = 'https://www.gravatar.com/avatar/65977e18f599e0319495b468c92b5179?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png';//default avatar
+                        userGravatarLink = 'https://www.gravatar.com/avatar/65977e18f599e0319495b468c92b5179?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png';//default avatar
                         userFound = false;
                     }
 
-                    //get SRS scores
+                    //get SRS scores from HTML structure
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(xmlhttp.responseText, 'text/html');
 
-                    const regexTemplate = `title="<div class='srs-logo STAGE'></div>" data-content="&lt;ul&gt;&lt;li&gt;Radicals&lt;span&gt;([0-9]+)&lt;/span&gt;&lt;/li&gt;&lt;li&gt;Kanji&lt;span&gt;([0-9]+)&lt;/span&gt;&lt;/li&gt;&lt;li&gt;Vocabulary&lt;span&gt;([0-9]+)&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;"`;
-                    const stages = ["apprentice", "guru", "master", "enlightened", "burned"];
+                    // Find all item spread table rows
+                    const rows = doc.querySelectorAll('.item-spread-table-row');
 
                     const obj = {};
-                    for (const stage of stages) {
-                        const stageRegex = new RegExp(regexTemplate.replace("STAGE", stage));
-                        const stageMatch = xmlhttp.responseText.match(stageRegex);
-                        if (stageMatch) {
-                            obj[stage + "Radicals"] = Number(stageMatch[1]);
-                            obj[stage + "Kanji"] = Number(stageMatch[2]);
-                            obj[stage + "Vocabulary"] = Number(stageMatch[3]);
-                            obj[stage + "Total"] = Number(stageMatch[1]) + Number(stageMatch[2]) + Number(stageMatch[3]);
+                    const srsLevels = ['apprentice', 'guru', 'master', 'enlightened', 'burned'];
+
+                    rows.forEach((row, index) => {
+                        if (index >= srsLevels.length) return;
+
+                        const counts = row.querySelectorAll('.item-spread-table-row__count');
+                        const total = row.querySelector('.item-spread-table-row__total');
+
+                        if (counts.length >= 3) {
+                            const radical = parseInt(counts[0].textContent.trim()) || 0;
+                            const kanji = parseInt(counts[1].textContent.trim()) || 0;
+                            const vocabulary = parseInt(counts[2].textContent.trim()) || 0;
+                            const totalCount = parseInt(total?.textContent.trim()) || 0;
+
+                            // Map to the expected property names
+                            const prefix = srsLevels[index] === 'apprentice' ? 'appr' :
+                            srsLevels[index] === 'guru' ? 'guru' :
+                            srsLevels[index] === 'master' ? 'master' :
+                            srsLevels[index] === 'enlightened' ? 'enlight' : 'burn';
+
+                            obj[prefix + 'Rad'] = radical;
+                            obj[prefix + 'Kan'] = kanji;
+                            obj[prefix + 'Voc'] = vocabulary;
+                            obj[prefix + 'Total'] = totalCount;
                         }
-                    }
+                    });
+
                     srsCountsLabeled.push(obj);
                 }
             }
@@ -513,12 +571,12 @@
         }
 
         item.level = userLevel;//assign level
-        item.avatar_link = userAvatarLink;//assign gravatarlink
+        item.avatar_link = userGravatarLink;//assign gravatarlink
         item.realm_number = setRealm(item.level);//assign realm
         item.srs_distribution = srsCountsLabeled;//assign SRS stats
         item.hasLeveledUp = hasUserLeveledUp;//whether or not user leveled up since last refresh
         item.wasUserFound = userFound;//whether the user name yielded result in the past (is used to detect name changes or deletion of account)
-        item.totalBurnPercentage = Math.round((srsCountsLabeled[0].burnedTotal/totalNumberOfWKItems*100) * 100) / 100;
+        item.totalBurnPercentage = Math.round((srsCountsLabeled[0].burnTotal/totalNumberOfWKItems*100) * 100) / 100;
     }
 
     function showLevelUps(){
@@ -535,8 +593,11 @@
     }
 
     async function processArray() {
-        $('.leaderboard_loader').css('display', 'inline');
-        $('.leaderboardSpan').addClass('blurry-text');
+        const loaderElements = document.querySelectorAll('.leaderboard_loader');
+        loaderElements.forEach(el => el.style.display = 'inline');
+
+        const leaderboardSpans = document.querySelectorAll('.leaderboardSpan');
+        leaderboardSpans.forEach(el => el.classList.add('blurry-text'));
 
         //process array in parallel
         const promises = usersInfoList.map(assignLevelAndAvatarFromWkProfile);//refresh all
@@ -564,22 +625,14 @@
     }*/
 
     function startup() {
-        console.log("Wanikani Leaderboard starting up!");
         //for testing purposes
         //deleteLeaderboardRelatedCache();
         //testData();
-
-        // link the icons font
-        linkFontAwesome();
 
         //get cache
         getTimeSinceLastRefreshFromCache().then(function(result) {
             timeSinceLastRefresh = result;
             updateTimeSinceRefreshText();
-            if (Date.now() > timeSinceLastRefresh + (1000 * 60 * 60 * 24)){
-                console.log("It's been over a day, refresh!");
-                delay().then(refreshDashboard);
-            }
         });
 
         //get cache
@@ -614,90 +667,163 @@
     // Styling
     //------------------------------
 
-    function linkFontAwesome() {
-        const fontawesome_link = document.createElement('link');
-        fontawesome_link.setAttribute('href', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.2.1/css/font-awesome.css');
-        fontawesome_link.setAttribute('rel', 'stylesheet');
-        document.head.appendChild(fontawesome_link);
-    }
-
     const leaderboardTableCss = `
-        /*.none*/
+        /* Leaderboard Container */
+        #leaderboard .community-banner-widget {
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
 
-        #leaderboard > .span4 .kotoba-table-list table .none a, #leaderboard > .span4 .kotoba-table-list table .none {
-            color: black;
-        }
-        #leaderboard > .span4 .kotoba-table-list table tr td span {
-            padding: 0em 0.3em;
+        /* Leaderboard Title */
+        #leaderboard .community-banner-widget h3.small-caps {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            padding-bottom: 10px;
         }
 
-        /*COLORS*/
+        /* Table Styling */
+        #leaderboard table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
 
-        tr.apprColor {
-            background-color: #f100a1;
-            background-image: -moz-linear-gradient(top, #f0a, #dd0093);
-            background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#f0a), to(#dd0093));
-            background-image: -webkit-linear-gradient(top, #f0a, #dd0093);
-            background-image: -o-linear-gradient(top, #f0a, #dd0093);
-            background-image: linear-gradient(to bottom, #f0a, #dd0093);
-            background-repeat: repeat-x;
+        #leaderboard table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        tr.apprColor span, tr.apprColor i {
-            color: #ffffff;
+
+        #leaderboard table tbody tr:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            position: relative;
         }
-        tr.guruColor {
-            background-color: #a100f1;
-            background-image: -moz-linear-gradient(top, #a0f, #9300dd);
-            background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#a0f), to(#9300dd));
-            background-image: -webkit-linear-gradient(top, #a0f, #9300dd);
-            background-image: -o-linear-gradient(top, #a0f, #9300dd);
-            background-image: linear-gradient(to bottom, #a0f, #9300dd);
-            background-repeat: repeat-x;
+
+        #leaderboard table tbody tr td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            transition: all 0.2s ease;
         }
-        tr.guruColor span, tr.guruColor i {
-            color: #ffffff;
+
+        #leaderboard table tbody tr td:first-child {
+            font-size: 1.3em;
+            font-weight: bold;
+            width: 50px;
+            text-align: center;
         }
-        tr.masterColor {
-            background-color: #294ddb;/*183FD8*/
-            background-image: -moz-linear-gradient(top, #5571e2, #2545C3);
-            background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#5571e2), to(#2545C3));
-            background-image: -webkit-linear-gradient(top, #5571e2, #2545C3);
-            background-image: -o-linear-gradient(top, #5571e2, #2545C3);
-            background-image: linear-gradient(to bottom, #5571e2, #2545C3);
-            background-repeat: repeat-x;
+
+        #leaderboard table tbody tr td:nth-child(2) {
+            font-weight: 500;
         }
-        tr.masterColor span, tr.masterColor i {
-            color: #ffffff;
+
+        #leaderboard table tbody tr td:last-child {
+            width: 60px;
         }
-        tr.enlightenedColor {
-            background-color: #00a1f1;
-            background-image: -moz-linear-gradient(top, #0af, #0093dd);
-            background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0af), to(#0093dd));
-            background-image: -webkit-linear-gradient(top, #0af, #0093dd);
-            background-image: -o-linear-gradient(top, #0af, #0093dd);
-            background-image: linear-gradient(to bottom, #0af, #0093dd);
-            background-repeat: repeat-x;
+
+        /* Link Styling */
+        #leaderboard table tbody tr td a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
         }
-        tr.enlightenedColor span, tr.enlightenedColor i {
-            color: #ffffff;
+
+        #leaderboard table tbody tr td a:hover {
+            text-decoration: underline;
         }
-        tr.burnedColor {
-            background-color: #faac05;
-            background-image: -moz-linear-gradient(top, #fbc550, #faac05);
-            background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#fbc550), to(#faac05));
-            background-image: -webkit-linear-gradient(top, #fbc550, #faac05);
-            background-image: -o-linear-gradient(top, #fbc550, #faac05);
-            background-image: linear-gradient(to bottom, #fbc550, #faac05);
-            background-repeat: repeat-x;
+
+        /* Icon Buttons */
+        .leaderboard-settings,
+        .leaderboard-refresh,
+        .leaderboard-resize,
+        .leaderboard-export {
+            transition: all 0.2s ease;
+            opacity: 0.8;
         }
-        tr.burnedColor span, tr.burnedColor i {
-            color: #ffffff;
+
+        .leaderboard-settings:hover,
+        .leaderboard-refresh:hover,
+        .leaderboard-resize:hover,
+        .leaderboard-export:hover {
+            opacity: 1;
+            transform: scale(1.15);
         }
+
+        .leaderboard-refresh:active {
+            animation: spin 1s ease-in-out;
+        }
+
+        /*COLORS - Enhanced with better gradients and effects*/
+
+        .apprColor {
+            background: linear-gradient(135deg, #ff0099 0%, #dd0093 100%);
+            color: white;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .apprColor:hover {
+            background: linear-gradient(135deg, #ff1aa8 0%, #ee00a4 100%);
+        }
+
+        .guruColor {
+            background: linear-gradient(135deg, #aa00ff 0%, #9300dd 100%);
+            color: white;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .guruColor:hover {
+            background: linear-gradient(135deg, #bb11ff 0%, #a400ee 100%);
+        }
+
+        .masterColor {
+            background: linear-gradient(135deg, #5571e2 0%, #2545C3 100%);
+            color: white;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .masterColor:hover {
+            background: linear-gradient(135deg, #6682f3 0%, #3656d4 100%);
+        }
+
+        .enlightenedColor {
+            background: linear-gradient(135deg, #00aaff 0%, #0093dd 100%);
+            color: white;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .enlightenedColor:hover {
+            background: linear-gradient(135deg, #11bbff 0%, #00a4ee 100%);
+        }
+
+        .burnedColor {
+            background: linear-gradient(135deg, #fbc550 0%, #faac05 100%);
+            color: #333;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .burnedColor:hover {
+            background: linear-gradient(135deg, #ffd661 0%, #ffbd16 100%);
+        }
+
         .customColor1 {
-            background-color: #dd0093;
+            background: linear-gradient(135deg, #ee00a4 0%, #dd0093 100%);
+            color: white;
         }
-        .errorColor{
-            background-color: maroon;
+
+        .errorColor {
+            background: linear-gradient(135deg, #c62828 0%, #8b0000 100%);
+            color: white;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* None Available State */
+        .none-available {
+            text-align: center;
+            color: #666;
         }
 
         /*END COLORS*/
@@ -705,6 +831,7 @@
         /*used to move level*/
         .floatRight {
             float: right;
+            margin-left: 8px;
         }
 
         /*TOOLTIP*/
@@ -713,79 +840,131 @@
             content: attr(tooltip);
             position: absolute;
             opacity: 0;
-            z-index: 1;
+            z-index: 100;
 
             /* customizable */
-            transition: all 0.15s ease;
-            padding: 10px;
-            color: #333;
-            border-radius: 10px;
-            box-shadow: 2px 2px 1px silver;
+            transition: all 0.2s ease;
+            padding: 10px 15px;
+            color: white;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-size: 0.9em;
+            white-space: nowrap;
+            pointer-events: none;
         }
 
-        /*TOOLTIP*/
-
         [tooltip]:hover:before {
-            /* needed - do not touch */
             opacity: 1;
+            margin-top: -45px;
+            margin-left: 10px;
+        }
 
-            /* customizable */
-            background: yellow;
-            margin-top: -50px;
-            margin-left: 20px;
-            line-height: 20px;
+        /* Avatar specific tooltip positioning */
+        td.leaderboard-userImg[tooltip]:hover:before {
+            margin-left: -100px;
+        }
+
+        /* Realm tooltip styling - make it smaller */
+        td[tooltip]:first-child:hover:before {
+            font-size: 0.7em;
         }
 
         [tooltip]:not([tooltip-persistent]):before {
             pointer-events: none;
         }
 
-        a.tooltipImg strong {line-height:30px;}
+        a.tooltipImg strong {
+            line-height: 30px;
+        }
+
         a.tooltipImg span {
-            z-index:10;display:none; padding:7px 10px;
-            margin-top:30px; margin-left:-160px;
-            width:300px; line-height:16px;
-        }
-        a.tooltipImg:hover span{
-            display:inline; position:absolute;
-            border:2px solid #FFF;  color:#EEE;
-            background:#333 url(https://cdn.wanikani.com/default-avatar-300x300-20121121.png) repeat-x 0 0;
+            z-index: 10;
+            display: none;
+            padding: 7px 10px;
+            margin-top: 30px;
+            margin-left: -160px;
+            width: 300px;
+            line-height: 16px;
         }
 
-        .callout {z-index:20;position:absolute;border:0;top:-14px;left:120px;}
-
-        a.tooltipImg span
-        {
-            border-radius:2px;
-            box-shadow: 0px 0px 8px 4px #666;
-            /*opacity: 0.8;*/
+        a.tooltipImg:hover span {
+            display: inline;
+            position: absolute;
+            border: 2px solid #FFF;
+            color: #EEE;
+            background: #333 url(https://cdn.wanikani.com/default-avatar-300x300-20121121.png) repeat-x 0 0;
         }
+
+        .callout {
+            z-index: 20;
+            position: absolute;
+            border: 0;
+            top: -14px;
+            left: 120px;
+        }
+
+        a.tooltipImg span {
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
         a.tooltipImg:before {
             pointer-events: none;
         }
 
         /*END TOOLTIP*/
+
         /*LEADERBOARD*/
+
+        /* User Avatar Styling */
+        td.leaderboard-userImg {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        td.leaderboard-userImg:hover {
+            transform: scale(1.1);
+        }
 
         td.leaderboard-userImg > img {
             border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            max-height: 25px;
+            width: 40px;
+            height: 40px;
+            max-height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
+
+        td.leaderboard-userImg:hover > img {
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Achievement Icons */
+        .icon-level-up,
+        .icon-trophy {
+            font-size: 1.3em;
+            margin-right: 5px;
+        }
+
+        /* Loader Animation */
         #leaderboard_loader {
-            border: 16px solid #f3f3f3;
+            border: 6px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            border-top: 16px solid #3498db;
-            width: 30px;
-            height: 30px;
-            -webkit-animation: spin 2s linear infinite; /* Safari */
-            animation: spin 2s linear infinite;
+            border-top: 6px solid #3498db;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
             position: absolute;
-            top: 40%;
-            left: 40%;
-            display:none;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 1000;
         }
+
         /* Safari */
         @-webkit-keyframes spin {
             0% { -webkit-transform: rotate(0deg); }
@@ -796,14 +975,22 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Blur Effect */
         .textshadow .blurry-text {
             color: transparent;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
         }
-        .blurry-text, .blurry-text section .small-caps, .blurry-text section table tbody tr, .blurry-text section table tbody tr td a span {
+
+        .blurry-text,
+        .blurry-text section .small-caps,
+        .blurry-text section table tbody tr,
+        .blurry-text section table tbody tr td a span {
             color: transparent;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
         }
+
+        /* File Import */
         #leaderboard-files-import {
             width: 0.1px;
             height: 0.1px;
@@ -812,33 +999,47 @@
             position: absolute;
             z-index: -1;
         }
+
+        label[for="leaderboard-files-import"] {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.8;
+        }
+
+        label[for="leaderboard-files-import"]:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
         .leaderboard-img-center {
             display: block;
             margin-left: auto;
             margin-right: auto;
-            margin-top: 5px;
-            margin-bottom: -5px;
         }
-        /*CUSTOM SETTINGS*/
-        .see-more {
-            text-align: center;
+
+        /* See More Section */
+        #leaderboard .see-more {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
         }
-        .small-caps {
-            font-variant: all-small-caps;
-            text-align: center;
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #leaderboard table tbody tr td {
+                padding: 8px 10px;
+                font-size: 0.9em;
+            }
+
+            td.leaderboard-userImg > img {
+                width: 30px;
+                height: 30px;
+            }
         }
-        .kotoba-table-list a {
-            text-decoration: none;
-        }
-        .kotoba-table-list table {
-            margin: 15px 0 10px 0;
-        }
-        .kotoba-table-list tr {
-            line-height: 35px;
-        }
-        .kotoba-table-list .icon-level-up {
-            margin-top: 9px;
-        }
+
         /*END LEADERBOARD*/
         `;
 
@@ -905,7 +1106,7 @@
             if(preExistingUsers != ''){
                 preExistingUsers = preExistingUsers.substring(0,preExistingUsers.length-2);//remove the ', '
 
-                    //check if custom box was included succesfully
+                //check if custom box was included succesfully
                 if(typeof swal === "function"){
                     swal("The following username(s) already exist on the leaderboard:", preExistingUsers);
                 } else{
@@ -975,11 +1176,11 @@
 
     //see if account is an admin account
     function isAdmin(name){
-        if($.inArray(name, adminNamesInfinity) != -1){
+        if(adminNamesInfinity.indexOf(name) !== -1){
             return 'sym-∞ ' + adminIdentifier;
-        } else if ($.inArray(name, adminNamesStar) != -1) {
+        } else if (adminNamesStar.indexOf(name) !== -1) {
             return 'sym-★ ' + adminIdentifier;
-        } else if ($.inArray(name, adminNamesNone) != -1){
+        } else if (adminNamesNone.indexOf(name) !== -1){
             return 'sym- ' + adminIdentifier;
         }
         return '';//not an admin account
@@ -987,22 +1188,34 @@
 
     //change admin level to ∞ or ★ or ' ' on hover
     function adminHovering(){
-        $(".adminUserLeaderboard").hover(function(){
-            let hoverSymbol = '∞';
-            let symType = $(this)[0].className.substring(0,5);
-            switch(symType) {
-                case 'sym-∞':
-                    hoverSymbol = '∞';
-                    break;
-                case 'sym-★':
-                    hoverSymbol = '★';
-                    break;
-                default:
-                    hoverSymbol = '';
-            }
-            $(this).children(':nth-child(2)').text(hoverSymbol);
-        }, function(){
-            $(this).children(':nth-child(2)').text($(this).children(':nth-child(2)')[0].className.substring(0,2));//turn symbol back to level
+        const adminUsers = document.querySelectorAll(".adminUserLeaderboard");
+        adminUsers.forEach(element => {
+            element.addEventListener('mouseenter', function() {
+                let hoverSymbol = '∞';
+                let symType = this.className.substring(0,5);
+                switch(symType) {
+                    case 'sym-∞':
+                        hoverSymbol = '∞';
+                        break;
+                    case 'sym-★':
+                        hoverSymbol = '★';
+                        break;
+                    default:
+                        hoverSymbol = '';
+                }
+                const secondChild = this.children[1];
+                if (secondChild) {
+                    secondChild.textContent = hoverSymbol;
+                }
+            });
+
+            element.addEventListener('mouseleave', function() {
+                const secondChild = this.children[1];
+                if (secondChild) {
+                    const level = secondChild.className.substring(0,2);
+                    secondChild.textContent = level;
+                }
+            });
         });
     };
 
@@ -1092,7 +1305,7 @@
             //if (usersInfoList.length%2 != 1 && endNumberTable != usersInfoList.length && ){
             //     endNumberTable++;
             // }
-//
+            //
 
             //if this is not the final table add one more user to the end
             if(endNumberTable >= usersInfoList.length){
@@ -1104,50 +1317,41 @@
                 //endNumberTable++;
             }
 
+
+
             sectionContents += `
-                <div class="leaderboardSpan span4">
-                    <section class="kotoba-table-list dashboard-sub-section wk-panel" style="position: relative;">
+                <div class="dashboard__widget dashboard__widget--full">
+                    <div class="community-banner-widget theme--default" style="display: flex; flex-direction: column; position: relative;">
                         <h3 class="small-caps">Leaderboard</h3>
-                        <i class="leaderboard-settings icon-plus" title="Add user" style="position:absolute; top:15px; right:15px;"></i>
-                        <i class="leaderboard-refresh icon-refresh" title="Refresh leaderboard" style="position:absolute; top:15px; right:35px;"></i>
-                        <i class="leaderboard-resize icon-resize-horizontal" title="Widen screen" style="position:absolute; top:15px; right:55px;"></i>
-                        <i class="leaderboard-export icon-circle-arrow-down" title="Download leaderboard" style="position:absolute; top:15px; left:15px;"></i>
-                        <input type="file" id="leaderboard-files-import" name="files[]" accept=".csv" multiple /><label class="icon-circle-arrow-up" for="leaderboard-files-import" title="Upload leaderboard" style="position:absolute; top:15px; left:35px;"></label>
+                        <svg class="leaderboard-settings" title="Add user" style="position:absolute; top:10px; right:15px; width:20px; height:20px; cursor:pointer;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+
+                        <svg class="leaderboard-refresh" title="Refresh leaderboard" style="position:absolute; top:10px; right:40px; width:20px; height:20px; cursor:pointer;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+
+                        <svg class="leaderboard-export" title="Download leaderboard" style="position:absolute; top:10px; left:15px; width:20px; height:20px; cursor:pointer;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+
+                        <input type="file" id="leaderboard-files-import" name="files[]" accept=".csv" multiple /><label class="icon-circle-arrow-up" for="leaderboard-files-import" title="Upload leaderboard" style="position:absolute; top:7.5px; left:25px;"></label>
                         <div id="leaderboard_loader" class="leaderboard_loader"></div>
                         <table>
-                            <tbody>`;
+                           <tbody>`;
             //if no users have been added yet
             if(usersInfoList.length == 0){
                 timeSinceLastRefreshText = '0 days 0 hours 0 minutes';
                 sectionContents += `<tr class="none-available">
                                         <td>
-                                        <div>
-                                            <i class="icon-user"></i>
-                                        </div>
-                                        You haven't added any users yet. <br /><br />
-                                        Use (<i class='icon-plus' ></i>) to add users.
+                                        You haven't added any users yet.
                                         </td>
                                     </tr>`
-                timeSinceLastRefreshHtml = `<div class="see-more">
-                                                <a class="small-caps">
-                                                &nbsp;
-                                                </a>
-                                            </div>`;
+                timeSinceLastRefreshHtml = ``;
             } else {
-                timeSinceLastRefreshHtml = `<div class="see-more">
-                                                <a class="small-caps" style="padding: 3.5px 15px 0px 15px;">Time since last refresh...</a>
-                                                <br/>
-                                                <span style="font-size: 15px; line-height: 24px">
+                timeSinceLastRefreshHtml = `<div class="see-more" style="margin-top: 10px;">
+                                                <span class="small-caps" style="padding: 3.5px 15px 0px 15px;">Time since last refresh:</span>
                                                 ${timeSinceLastRefreshText}
-                                                (
-                                                <a class="tooltipImg icon-question">
-                                                    <span>
-                                                        <strong style="background-color: black">**Updating Leaderboard**</strong><br />
-                                                        <i style="background-color: black">Leaderboard updates only when refreshed (<i class='icon-refresh' ></i>) manually.</i>
-                                                    </span>
-                                                </a>
-                                                )
-                                                </span>
                                             </div>`;
             }
             for (var j = startNumberTable; j < endNumberTable; j++){
@@ -1158,7 +1362,7 @@
                 let userErrorNotFoundMessage = usersInfoList[j].wasUserFound ? '' : accountNotFoundMessage;
 
                 //calculate burn percentage
-                let burnedTotal = usersInfoList[j].level != 3 ? `Total Burned: ${usersInfoList[j].srs_distribution[0].burnedTotal}, ${usersInfoList[j].totalBurnPercentage}%` : '&#9888; Users without subscription will show as level 3.';
+                let burnTotal = usersInfoList[j].level != 3 ? `Total Burned: ${usersInfoList[j].srs_distribution[0].burnTotal}, ${usersInfoList[j].totalBurnPercentage}%` : '&#9888; Users without subscription will show as level 3.';
 
                 //for user achievements
                 let userCelebrationIcon = '';
@@ -1177,39 +1381,66 @@
                                         <td style="text-align:center;" tooltip="${wkRealmNames[usersInfoList[j].realm_number]}">
                                             <span>${wkRealms[usersInfoList[j].realm_number]}</span>
                                         </td>
-                                        <td tooltip="${burnedTotal}">
-                                            <a href="users/${usersInfoList[j].name}" class="${adminClass}">
+                                        <td tooltip="${burnTotal}">
+                                            <a href="users/${usersInfoList[j].name}" target="_blank" class="${adminClass}">
                                                 <span>${usersInfoList[j].name + userErrorNotFoundMessage}</span>
                                                 <span class="${usersInfoList[j].level} floatRight">${usersInfoList[j].level}</span>
                                                 <i class="${userCelebrationIcon} floatRight"></i>
                                             </a>
                                         </td>
                                         <td class="${usersInfoList[j].name} leaderboard-userImg" tooltip="Remove user?">
-                                            <img class="leaderboard-img-center" src="${usersInfoList[j].avatar_link}"/>
+                                            <img class="leaderboard-img-center" src="https://www.gravatar.com/avatar/${usersInfoList[j].avatar_link}?s=300&d=https://cdn.wanikani.com/default-avatar-300x300-20121121.png"/>
                                         </td>
                                     </tr>`;
             }
             sectionContents += `
-                                </tbody>
-                            </table>
-                            ${timeSinceLastRefreshHtml}
-                        </section>
-                    </div>`;
+                               </tbody>
+                           </table>
+                           ${timeSinceLastRefreshHtml}
+                       </div>
+                   </div>`;
         }
-        let leaderboardTableStyle = '<div id="leaderboard" class="row">';
+        let leaderboardTableStyle = '<div id="leaderboard" class="dashboard__row">';
         sectionContents += `</div>`;
 
         //check if leaderboards is already there
         if(document.getElementById("leaderboard")) {
-            $('#leaderboard').replaceWith(leaderboardTableStyle+sectionContents);//replace existing board
+            const existingLeaderboard = document.getElementById("leaderboard");
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = leaderboardTableStyle+sectionContents;
+            existingLeaderboard.replaceWith(tempDiv.firstChild);
         } else {
-            if ($('section.progression').length) {
-                $('section.progression').after(leaderboardTableStyle);
+            // const progressionSection = document.querySelector('div.level-progress-widget');
+            // const srsProgressSection = document.querySelector('section.srs-progress');
+            // const tempDiv = document.createElement('div');
+            // tempDiv.innerHTML = leaderboardTableStyle + sectionContents;
+
+            // if (progressionSection) {
+            //     progressionSection.after(tempDiv.firstChild);
+            //     console.log('inserted after progression section');
+            //     console.log(progressionSection);
+            //     console.log(tempDiv);
+            //     console.log(sectionContents);
+            // } else if (srsProgressSection) {
+            //     srsProgressSection.after(tempDiv.firstChild);
+            // }
+
+            // Find all dashboard rows
+            const dashboardRows = document.querySelectorAll('div.dashboard__row');
+
+            // Check if we have at least 3 rows and if test row doesn't already exist
+            if (dashboardRows.length >= 3) {
+                const thirdRow = dashboardRows[2]; // Third row (0-indexed)
+
+                // Create the new test row
+                const leaderboard = document.createElement('div');
+                leaderboard.innerHTML = leaderboardTableStyle + sectionContents;
+
+                // Insert after the third row
+                thirdRow.after(leaderboard);
             }
-            else {
-                $('div.wk-panel--review-forecast').before(leaderboardTableStyle);
-            }
-            $('#leaderboard').append(sectionContents);
+
+
         }
 
         //eventlisteners
@@ -1221,19 +1452,24 @@
         for (let i = 0; i < classname.length; i++) {
             classname[i].addEventListener('click', refreshDashboard);
         }
-        classname = document.getElementsByClassName('leaderboard-resize');
-        for (let i = 0; i < classname.length; i++) {
-            classname[i].addEventListener('click', updateWidth);
-            classname[i].tableParam = i;
-        }
+        // classname = document.getElementsByClassName('leaderboard-resize');
+        // for (let i = 0; i < classname.length; i++) {
+        //     classname[i].addEventListener('click', updateWidth);
+        //     classname[i].tableParam = i;
+        // }
         classname = document.getElementsByClassName('leaderboard-export');
         for (let i = 0; i < classname.length; i++) {
             classname[i].addEventListener('click', exportUsers);
         }
         document.getElementById('leaderboard-files-import').addEventListener('change', importUsers);
 
-        $('#leaderboard').find('.leaderboard-userImg').on('click', deleteUser);
+        const leaderboardUserImgs = document.querySelectorAll('#leaderboard .leaderboard-userImg');
+        leaderboardUserImgs.forEach(element => {
+            element.addEventListener('click', deleteUser);
+        });
 
         adminHovering();
     }
+
+    startup();
 })();
